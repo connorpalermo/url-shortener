@@ -3,6 +3,7 @@ package persistence
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -22,6 +23,7 @@ type (
 	DBProvider interface {
 		GetItem(context.Context, *dynamodb.GetItemInput, ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
 		PutItem(context.Context, *dynamodb.PutItemInput, ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+		UpdateItem(context.Context, *dynamodb.UpdateItemInput, ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
 	}
 )
 
@@ -31,6 +33,8 @@ const (
 	OriginalURL   = "original_url"
 	DefaultRegion = "us-east-1"
 	URLTable      = "url-mapping"
+	URLCounter    = "url-counter"
+	CounterValue  = "counter_value"
 )
 
 func New(logger *zap.Logger) (*UrlDB, error) {
@@ -83,4 +87,35 @@ func (db *UrlDB) WriteItem(id int64, shortUrl, originalUrl string) error {
 	db.Logger.Info("successfully created database entry for the following values:", zap.String(logkey.ID, *idStr),
 		zap.String(logkey.OriginalURL, originalUrl), zap.String(logkey.ShortenedURL, shortUrl))
 	return nil
+}
+
+func (db *UrlDB) IncrementCounter() (int64, error) {
+	input := &dynamodb.UpdateItemInput{
+		TableName: &db.TableName,
+		Key: map[string]types.AttributeValue{
+			"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+		},
+		UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":start": &types.AttributeValueMemberN{Value: "0"},
+			":inc":   &types.AttributeValueMemberN{Value: "1"},
+		},
+		ReturnValues: types.ReturnValueUpdatedNew,
+	}
+
+	result, err := db.DBClient.UpdateItem(context.Background(), input)
+	if err != nil {
+		return 0, err
+	}
+
+	counterValue, ok := result.Attributes[CounterValue].(*types.AttributeValueMemberN)
+	if !ok {
+		return 0, fmt.Errorf("failed to retrieve updated counter value")
+	}
+
+	counter, err := strconv.ParseInt(counterValue.Value, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return counter, nil
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -25,6 +26,11 @@ func (m *MockDynamoDBClient) GetItem(ctx context.Context, params *dynamodb.GetIt
 func (m *MockDynamoDBClient) PutItem(ctx context.Context, params *dynamodb.PutItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error) {
 	args := m.Called(ctx, params)
 	return args.Get(0).(*dynamodb.PutItemOutput), args.Error(1)
+}
+
+func (m *MockDynamoDBClient) UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, _ ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error) {
+	args := m.Called(ctx, params)
+	return args.Get(0).(*dynamodb.UpdateItemOutput), args.Error(1)
 }
 
 var tableName = "url-mapping"
@@ -157,4 +163,123 @@ func Test_WriteItem(t *testing.T) {
 
 		m.AssertNumberOfCalls(t, "PutItem", 1)
 	}
+}
+
+func Test_IncrementCounter(t *testing.T) {
+	tests := map[string]struct {
+		output          *dynamodb.UpdateItemOutput
+		input           *dynamodb.UpdateItemInput
+		expectedCounter int64
+		expectError     bool
+		updateError     error
+	}{
+		"Happy path": {
+			input: &dynamodb.UpdateItemInput{
+				TableName: aws.String(URLTable),
+				Key: map[string]types.AttributeValue{
+					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+				},
+				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":start": &types.AttributeValueMemberN{Value: "0"},
+					":inc":   &types.AttributeValueMemberN{Value: "1"},
+				},
+				ReturnValues: types.ReturnValueUpdatedNew,
+			},
+			output: &dynamodb.UpdateItemOutput{
+				Attributes: map[string]types.AttributeValue{
+					"counter_value": &types.AttributeValueMemberN{
+						Value: "123",
+					},
+				},
+			},
+			expectedCounter: int64(123),
+		},
+		"Sad path no counter_value": {
+			input: &dynamodb.UpdateItemInput{
+				TableName: aws.String(URLTable),
+				Key: map[string]types.AttributeValue{
+					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+				},
+				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":start": &types.AttributeValueMemberN{Value: "0"},
+					":inc":   &types.AttributeValueMemberN{Value: "1"},
+				},
+				ReturnValues: types.ReturnValueUpdatedNew,
+			},
+			output: &dynamodb.UpdateItemOutput{
+				Attributes: map[string]types.AttributeValue{},
+			},
+			expectError: true,
+		},
+		"Sad path invalid counter_value": {
+			input: &dynamodb.UpdateItemInput{
+				TableName: aws.String(URLTable),
+				Key: map[string]types.AttributeValue{
+					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+				},
+				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":start": &types.AttributeValueMemberN{Value: "0"},
+					":inc":   &types.AttributeValueMemberN{Value: "1"},
+				},
+				ReturnValues: types.ReturnValueUpdatedNew,
+			},
+			output: &dynamodb.UpdateItemOutput{
+				Attributes: map[string]types.AttributeValue{
+					"counter_value": &types.AttributeValueMemberN{
+						Value: "invalid",
+					},
+				},
+			},
+			expectError: true,
+		},
+		"Sad path update fails": {
+			input: &dynamodb.UpdateItemInput{
+				TableName: aws.String(URLTable),
+				Key: map[string]types.AttributeValue{
+					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+				},
+				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":start": &types.AttributeValueMemberN{Value: "0"},
+					":inc":   &types.AttributeValueMemberN{Value: "1"},
+				},
+				ReturnValues: types.ReturnValueUpdatedNew,
+			},
+			output: &dynamodb.UpdateItemOutput{
+				Attributes: map[string]types.AttributeValue{
+					"counter_value": &types.AttributeValueMemberN{
+						Value: "invalid",
+					},
+				},
+			},
+			expectError: true,
+			updateError: errors.New("error"),
+		},
+	}
+
+	logger, _ := zap.NewProduction()
+
+	for _, tc := range tests {
+		m := &MockDynamoDBClient{}
+
+		m.On("UpdateItem", context.Background(), tc.input).Return(tc.output, tc.updateError)
+
+		db := &UrlDB{
+			Logger:    logger,
+			DBClient:  m,
+			TableName: URLTable,
+		}
+
+		counter, err := db.IncrementCounter()
+
+		if tc.expectError {
+			assert.Error(t, err)
+		}
+
+		assert.Equal(t, counter, tc.expectedCounter)
+	}
+
 }
