@@ -33,6 +33,11 @@ func (m *MockDynamoDBClient) UpdateItem(ctx context.Context, params *dynamodb.Up
 	return args.Get(0).(*dynamodb.UpdateItemOutput), args.Error(1)
 }
 
+func (m *MockDynamoDBClient) Scan(ctx context.Context, params *dynamodb.ScanInput, _ ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error) {
+	args := m.Called(ctx, params)
+	return args.Get(0).(*dynamodb.ScanOutput), args.Error(1)
+}
+
 var tableName = "url-mapping"
 
 func Test_CreateClient(t *testing.T) {
@@ -170,7 +175,7 @@ func Test_IncrementCounter(t *testing.T) {
 		output          *dynamodb.UpdateItemOutput
 		input           *dynamodb.UpdateItemInput
 		expectedCounter int64
-		expectError     bool
+		checkError      bool
 		updateError     error
 	}{
 		"Happy path": {
@@ -211,7 +216,7 @@ func Test_IncrementCounter(t *testing.T) {
 			output: &dynamodb.UpdateItemOutput{
 				Attributes: map[string]types.AttributeValue{},
 			},
-			expectError: true,
+			checkError: true,
 		},
 		"Sad path invalid counter_value": {
 			input: &dynamodb.UpdateItemInput{
@@ -233,7 +238,7 @@ func Test_IncrementCounter(t *testing.T) {
 					},
 				},
 			},
-			expectError: true,
+			checkError: true,
 		},
 		"Sad path update fails": {
 			input: &dynamodb.UpdateItemInput{
@@ -255,7 +260,7 @@ func Test_IncrementCounter(t *testing.T) {
 					},
 				},
 			},
-			expectError: true,
+			checkError:  true,
 			updateError: errors.New("error"),
 		},
 	}
@@ -275,11 +280,77 @@ func Test_IncrementCounter(t *testing.T) {
 
 		counter, err := db.IncrementCounter()
 
-		if tc.expectError {
+		if tc.checkError {
 			assert.Error(t, err)
 		}
 
 		assert.Equal(t, counter, tc.expectedCounter)
 	}
 
+}
+
+func Test_GetItemByNonPK(t *testing.T) {
+	tests := map[string]struct {
+		fieldName  string
+		value      string
+		input      *dynamodb.ScanInput
+		output     *dynamodb.ScanOutput
+		scanError  error
+		checkError bool
+	}{
+		"GetItemByNonPK Happy Path": {
+			fieldName: "original_url",
+			value:     "https://example.com",
+			input: &dynamodb.ScanInput{
+				TableName:        aws.String(URLTable),
+				FilterExpression: aws.String("original_url = :value"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":value": &types.AttributeValueMemberS{Value: "https://example.com"},
+				},
+			},
+			output: &dynamodb.ScanOutput{
+				Items: []map[string]types.AttributeValue{
+					{
+						"original_url": &types.AttributeValueMemberS{Value: "https://example.com"},
+						"short_url":    &types.AttributeValueMemberS{Value: "short.ly/abc123"},
+					},
+				},
+			},
+		},
+		"GetItemByNonPK Sad Path": {
+			fieldName: "original_url",
+			value:     "https://example.com",
+			input: &dynamodb.ScanInput{
+				TableName:        aws.String(URLTable),
+				FilterExpression: aws.String("original_url = :value"),
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":value": &types.AttributeValueMemberS{Value: "https://example.com"},
+				},
+			},
+			scanError:  errors.New("error"),
+			checkError: true,
+		},
+	}
+	logger, _ := zap.NewProduction()
+
+	for _, tc := range tests {
+		m := &MockDynamoDBClient{}
+
+		m.On("Scan", context.Background(), tc.input).Return(tc.output, tc.scanError)
+
+		db := &UrlDB{
+			Logger:    logger,
+			DBClient:  m,
+			TableName: URLTable,
+		}
+
+		res, err := db.GetItemByNonPK(tc.fieldName, tc.value)
+
+		if tc.checkError {
+			assert.Error(t, err)
+			return
+		}
+
+		assert.Equal(t, res, tc.output)
+	}
 }

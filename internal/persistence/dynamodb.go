@@ -24,6 +24,7 @@ type (
 		GetItem(context.Context, *dynamodb.GetItemInput, ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
 		PutItem(context.Context, *dynamodb.PutItemInput, ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
 		UpdateItem(context.Context, *dynamodb.UpdateItemInput, ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
+		Scan(context.Context, *dynamodb.ScanInput, ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error)
 	}
 )
 
@@ -64,6 +65,23 @@ func (db *UrlDB) GetItemByPK(shortUrl string) (*dynamodb.GetItemOutput, error) {
 	if err != nil {
 		return nil, err
 	}
+	return result, nil
+}
+
+func (db *UrlDB) GetItemByNonPK(attributeName, attributeValue string) (*dynamodb.ScanOutput, error) {
+	input := &dynamodb.ScanInput{
+		TableName:        &db.TableName,
+		FilterExpression: aws.String(fmt.Sprintf("%s = :value", attributeName)),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":value": &types.AttributeValueMemberS{Value: attributeValue},
+		},
+	}
+
+	result, err := db.DBClient.Scan(context.Background(), input)
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
