@@ -19,8 +19,8 @@ type (
 	}
 
 	UrlShortenerProvider interface {
-		ShortenURL(url string) string
-		GetOriginalURL(shortened string) (string, bool)
+		ShortenURL(url string) (string, error)
+		GetOriginalURL(shortened string) (string, error)
 	}
 
 	URLDBProvider interface {

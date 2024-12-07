@@ -9,6 +9,7 @@ func New(h endpoint.Provider) *chi.Mux {
 	m := chi.NewRouter()
 
 	m.Get(endpoint.HealthCheckEndpoint, h.HealthCheckHandler())
+	m.Get(endpoint.RedirectEndpoint, h.RedirectHandler())
 
 	return m
 }

@@ -10,6 +10,7 @@ import (
 type (
 	Provider interface {
 		HealthCheckHandler() http.HandlerFunc
+		RedirectHandler() http.HandlerFunc
 	}
 
 	Handler struct {
