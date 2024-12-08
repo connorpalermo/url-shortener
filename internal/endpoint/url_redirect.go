@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	RedirectEndpoint    = "/{" + ShortUrlParam + "}"
-	ShortUrlParam       = "shortUrl"
-	RedirectErrorMsg    = "shortUrl mapping not found in database"
-	ShortUrlParamErrMsg = "shortUrl parameter is missing"
+	RedirectEndpoint   = "/{" + ShortUrlParam + "}"
+	ShortUrlParam      = "shortUrl"
+	RedirectError      = "shortUrl mapping invalid or not found in database"
+	ShortUrlParamError = "shortUrl parameter is missing"
 )
 
 func (h *Handler) RedirectHandler() http.HandlerFunc {
@@ -22,7 +22,7 @@ func (h *Handler) RedirectHandler() http.HandlerFunc {
 		fmt.Println("Short URL is: " + shortUrl)
 		if shortUrl == "" {
 			h.Logger.Error("shortUrl parameter is missing in the request")
-			http.Error(w, ShortUrlParamErrMsg, http.StatusBadRequest)
+			http.Error(w, ShortUrlParamError, http.StatusBadRequest)
 			return
 		}
 
@@ -31,7 +31,7 @@ func (h *Handler) RedirectHandler() http.HandlerFunc {
 		originalURL, err := h.UrlShortenerProvider.GetOriginalURL(shortUrl)
 		if err != nil {
 			h.Logger.Error("failed to retrieve original URL", zap.Error(err))
-			http.Error(w, RedirectErrorMsg, http.StatusInternalServerError)
+			http.Error(w, RedirectError, http.StatusInternalServerError)
 			return
 		}
 

@@ -182,7 +182,7 @@ func Test_IncrementCounter(t *testing.T) {
 			input: &dynamodb.UpdateItemInput{
 				TableName: aws.String(URLTable),
 				Key: map[string]types.AttributeValue{
-					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+					ShortURL: &types.AttributeValueMemberS{Value: URLCounter},
 				},
 				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
 				ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -204,7 +204,7 @@ func Test_IncrementCounter(t *testing.T) {
 			input: &dynamodb.UpdateItemInput{
 				TableName: aws.String(URLTable),
 				Key: map[string]types.AttributeValue{
-					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+					ShortURL: &types.AttributeValueMemberS{Value: URLCounter},
 				},
 				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
 				ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -222,7 +222,7 @@ func Test_IncrementCounter(t *testing.T) {
 			input: &dynamodb.UpdateItemInput{
 				TableName: aws.String(URLTable),
 				Key: map[string]types.AttributeValue{
-					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+					ShortURL: &types.AttributeValueMemberS{Value: URLCounter},
 				},
 				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
 				ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -244,7 +244,7 @@ func Test_IncrementCounter(t *testing.T) {
 			input: &dynamodb.UpdateItemInput{
 				TableName: aws.String(URLTable),
 				Key: map[string]types.AttributeValue{
-					"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+					ShortURL: &types.AttributeValueMemberS{Value: URLCounter},
 				},
 				UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
 				ExpressionAttributeValues: map[string]types.AttributeValue{

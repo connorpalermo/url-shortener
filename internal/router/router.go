@@ -10,6 +10,7 @@ func New(h endpoint.Provider) *chi.Mux {
 
 	m.Get(endpoint.HealthCheckEndpoint, h.HealthCheckHandler())
 	m.Get(endpoint.RedirectEndpoint, h.RedirectHandler())
+	m.Post(endpoint.ShortenURLEndpoint, h.ShortenHandler())
 	m.Get("/", h.RedirectHandler())
 
 	return m

@@ -11,6 +11,7 @@ type (
 	Provider interface {
 		HealthCheckHandler() http.HandlerFunc
 		RedirectHandler() http.HandlerFunc
+		ShortenHandler() http.HandlerFunc
 	}
 
 	Handler struct {

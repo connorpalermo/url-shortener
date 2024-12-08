@@ -83,7 +83,7 @@ func (u *UrlShortener) ShortenURL(url string) (string, error) {
 	}
 	shortened := encodeBase62(id)
 
-	err = u.DBClient.WriteItem(id, shortened, OriginalURL)
+	err = u.DBClient.WriteItem(id, shortened, url)
 	if err != nil {
 		return "", err
 	}

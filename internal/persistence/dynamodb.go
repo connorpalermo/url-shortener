@@ -89,10 +89,11 @@ func (db *UrlDB) WriteItem(id int64, shortUrl, originalUrl string) error {
 	idStr := aws.String(fmt.Sprintf("%d", id))
 
 	item := map[string]types.AttributeValue{
-		ID:          &types.AttributeValueMemberN{Value: *idStr},
 		ShortURL:    &types.AttributeValueMemberS{Value: shortUrl},
+		ID:          &types.AttributeValueMemberN{Value: *idStr},
 		OriginalURL: &types.AttributeValueMemberS{Value: originalUrl},
 	}
+
 	input := &dynamodb.PutItemInput{
 		TableName: &db.TableName,
 		Item:      item,
@@ -111,7 +112,7 @@ func (db *UrlDB) IncrementCounter() (int64, error) {
 	input := &dynamodb.UpdateItemInput{
 		TableName: &db.TableName,
 		Key: map[string]types.AttributeValue{
-			"ShortURL": &types.AttributeValueMemberS{Value: URLCounter},
+			ShortURL: &types.AttributeValueMemberS{Value: URLCounter},
 		},
 		UpdateExpression: aws.String("SET counter_value = if_not_exists(counter_value, :start) + :inc"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
