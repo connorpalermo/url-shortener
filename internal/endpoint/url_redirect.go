@@ -1,7 +1,6 @@
 package endpoint
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/connorpalermo/url-shortener/constant/logkey"
@@ -19,7 +18,6 @@ const (
 func (h *Handler) RedirectHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortUrl := chi.URLParam(r, ShortUrlParam)
-		fmt.Println("Short URL is: " + shortUrl)
 		if shortUrl == "" {
 			h.Logger.Error("shortUrl parameter is missing in the request")
 			http.Error(w, ShortUrlParamError, http.StatusBadRequest)
