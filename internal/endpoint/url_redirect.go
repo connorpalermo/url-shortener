@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/connorpalermo/url-shortener/constant/logkey"
@@ -9,15 +10,19 @@ import (
 )
 
 const (
-	RedirectEndpoint = "/{shortUrl}"
+	RedirectEndpoint    = "/{" + ShortUrlParam + "}"
+	ShortUrlParam       = "shortUrl"
+	RedirectErrorMsg    = "shortUrl mapping not found in database"
+	ShortUrlParamErrMsg = "shortUrl parameter is missing"
 )
 
 func (h *Handler) RedirectHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		shortUrl := chi.URLParam(r, "shortUrl")
+		shortUrl := chi.URLParam(r, ShortUrlParam)
+		fmt.Println("Short URL is: " + shortUrl)
 		if shortUrl == "" {
 			h.Logger.Error("shortUrl parameter is missing in the request")
-			http.Error(w, "shortUrl is missing", http.StatusBadRequest)
+			http.Error(w, ShortUrlParamErrMsg, http.StatusBadRequest)
 			return
 		}
 
@@ -26,7 +31,7 @@ func (h *Handler) RedirectHandler() http.HandlerFunc {
 		originalURL, err := h.UrlShortenerProvider.GetOriginalURL(shortUrl)
 		if err != nil {
 			h.Logger.Error("failed to retrieve original URL", zap.Error(err))
-			http.Error(w, "failed to redirect", http.StatusInternalServerError)
+			http.Error(w, RedirectErrorMsg, http.StatusInternalServerError)
 			return
 		}
 

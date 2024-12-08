@@ -32,7 +32,6 @@ func main() {
 		UrlShortenerProvider: u,
 	})
 
-	// Start the HTTP server on port 8080
 	logger.Info("Starting server on port 8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		logger.Fatal("Error starting server", zap.Error(err))
