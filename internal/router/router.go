@@ -2,11 +2,15 @@ package router
 
 import (
 	"github.com/connorpalermo/url-shortener/internal/endpoint"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 )
 
 func New(h endpoint.Provider) *chi.Mux {
 	m := chi.NewRouter()
+
+	m.Use(middleware.Logger)
+	m.Use(middleware.Recoverer)
 
 	m.Get(endpoint.HealthCheckEndpoint, h.HealthCheckHandler())
 	m.Get(endpoint.RedirectEndpoint, h.RedirectHandler())

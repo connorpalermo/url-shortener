@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+# Run the Go binary in the AWS Lambda environment
+./main/main

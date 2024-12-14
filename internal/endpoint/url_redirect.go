@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/connorpalermo/url-shortener/constant/logkey"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 

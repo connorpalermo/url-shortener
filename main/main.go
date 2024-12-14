@@ -1,8 +1,11 @@
 package main
 
 import (
-	"net/http"
+	"context"
 
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	chiadapter "github.com/awslabs/aws-lambda-go-api-proxy/chi"
 	"github.com/connorpalermo/url-shortener/internal/endpoint"
 	"github.com/connorpalermo/url-shortener/internal/persistence"
 	"github.com/connorpalermo/url-shortener/internal/router"
@@ -32,9 +35,11 @@ func main() {
 		UrlShortenerProvider: u,
 	})
 
-	logger.Info("Starting server on port 8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		logger.Fatal("Error starting server", zap.Error(err))
-	}
+	chiLambda := chiadapter.New(mux)
 
+	// Start Lambda handler with ProxyWithContext
+	lambda.Start(func(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+		logger.Info("Raw Request", zap.Any("request", request))
+		return chiLambda.ProxyWithContext(ctx, request)
+	})
 }
