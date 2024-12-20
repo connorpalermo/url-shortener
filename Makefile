@@ -2,7 +2,7 @@
 
 # Variables
 BINARY_NAME = main
-ZIP_NAME = deployment.zip
+ZIP_NAME = function.zip
 MAIN_FILE = ./main/main.go
 BINARY_PATH = ./main/$(BINARY_NAME)  # Path to the binary inside the main/ directory
 BOOTSTRAP_NAME = bootstrap
